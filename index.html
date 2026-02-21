@@ -1,0 +1,1113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="MortgageCalc"/>
+<meta name="theme-color" content="#0a0e1a"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon-192.png"/>
+<title>Mortgage Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:       #0a0e1a;
+  --surface:  #111827;
+  --surface2: #1a2235;
+  --border:   #1f2d45;
+  --gold:     #c9a846;
+  --gold-dim: #8a7130;
+  --cyan:     #38bdf8;
+  --red:      #f87171;
+  --green:    #4ade80;
+  --text:     #e8eaf0;
+  --muted:    #6b7a99;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif}
+
+/* ── LAYOUT ── */
+#app{display:flex;flex-direction:column;height:100dvh;padding-top:var(--safe-top)}
+#header{padding:12px 20px 8px;border-bottom:1px solid var(--border);flex-shrink:0;display:flex;align-items:center;gap:12px}
+#header h1{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;letter-spacing:.08em;color:var(--gold);text-transform:uppercase;flex:1}
+.tab-bar{display:flex;border-top:1px solid var(--border);padding-bottom:var(--safe-bot);flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;transition:color .2s;border:none;background:none;-webkit-appearance:none}
+.tab svg{width:20px;height:20px;stroke-width:1.5}
+.tab.active{color:var(--gold)}
+.tab.active svg{filter:drop-shadow(0 0 6px var(--gold-dim))}
+#content{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:none}
+.pane{display:none;padding:16px 16px calc(16px + var(--safe-bot))}
+.pane.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px}
+.card-header{padding:10px 14px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.card-header h2{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.card-header .dot{width:6px;height:6px;border-radius:50%;background:var(--gold)}
+
+/* ── INPUTS ── */
+.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.field{background:var(--surface);padding:10px 14px;display:flex;flex-direction:column;gap:4px}
+.field.full{grid-column:1/-1}
+.field label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.field input,.field select{background:transparent;border:none;outline:none;font-family:'DM Mono',monospace;font-size:15px;font-weight:400;color:var(--gold);width:100%;-webkit-appearance:none;caret-color:var(--cyan)}
+.field select{color:var(--gold)}
+.field select option{background:var(--surface2);color:var(--text)}
+.field input::placeholder{color:var(--gold-dim)}
+.suffix{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace}
+
+/* ── RESULTS ── */
+.results-grid{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--border)}
+.result-item{background:var(--surface);padding:10px 14px}
+.result-item.highlight{background:linear-gradient(135deg,#141c30,#0f1829)}
+.result-item.full{grid-column:1/-1}
+.result-label{font-size:10px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.result-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:500;color:var(--text)}
+.result-value.big{font-size:20px;color:var(--gold)}
+.result-value.green{color:var(--green)}
+.result-value.red{color:var(--red)}
+.result-value.cyan{color:var(--cyan)}
+
+/* ── BUTTONS ── */
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;border:none;border-radius:8px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:13px;letter-spacing:.04em;cursor:pointer;transition:all .15s;-webkit-appearance:none}
+.btn-gold{background:var(--gold);color:#0a0e1a;padding:13px 20px;width:100%}
+.btn-gold:active{opacity:.85;transform:scale(.98)}
+.btn-outline{background:transparent;border:1px solid var(--border);color:var(--muted);padding:9px 14px}
+.btn-outline:active{background:var(--surface2)}
+.btn-danger{background:transparent;border:1px solid #3b1f1f;color:var(--red);padding:8px 12px;font-size:12px}
+
+/* ── TOGGLE ── */
+.toggle-row{display:flex;gap:8px;margin-bottom:14px}
+.toggle-btn{flex:1;padding:9px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted);font-size:12px;font-weight:600;letter-spacing:.05em;cursor:pointer;text-transform:uppercase;transition:all .2s;-webkit-appearance:none}
+.toggle-btn.active{background:var(--surface2);border-color:var(--gold);color:var(--gold)}
+
+/* ── AMORT TABLE ── */
+.table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:11px}
+th{background:var(--surface2);color:var(--muted);font-weight:600;letter-spacing:.07em;text-transform:uppercase;padding:8px 10px;text-align:right;white-space:nowrap;position:sticky;top:0}
+th:first-child{text-align:left}
+td{padding:7px 10px;text-align:right;border-bottom:1px solid #111827;color:var(--text)}
+td:first-child{text-align:left;color:var(--muted)}
+tr:nth-child(even) td{background:#0d1220}
+tr.yr-end td{border-bottom:1px solid var(--border);color:var(--cyan)}
+.totals td{background:var(--surface2)!important;color:var(--gold);font-weight:500;border-top:1px solid var(--border)}
+
+/* ── SCENARIOS ── */
+.scenario-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;position:relative}
+.scenario-card h3{font-size:13px;font-weight:600;color:var(--text);margin-bottom:4px}
+.scenario-meta{font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.7}
+.scenario-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.kpi{background:var(--surface2);border-radius:6px;padding:8px 10px}
+.kpi-label{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:2px}
+.kpi-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold)}
+.scenario-actions{display:flex;gap:8px;margin-top:10px}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
+.empty-state svg{margin:0 auto 16px;display:block;opacity:.3}
+.empty-state p{font-size:14px}
+
+/* ── COMPARE ── */
+.compare-table{width:100%;border-collapse:collapse}
+.compare-table th{background:var(--surface2);padding:10px 12px;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);white-space:nowrap}
+.compare-table th:first-child{color:var(--muted)}
+.compare-table td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+.compare-table td:first-child{color:var(--muted);font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap}
+.compare-table td:not(:first-child){font-family:'DM Mono',monospace;color:var(--text);text-align:right}
+.compare-table tr:nth-child(even) td{background:#0d1220}
+.best{color:var(--green)!important}
+
+/* ── SAVE MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:flex-end}
+.modal-overlay.open{display:flex}
+.modal{background:var(--surface);border-top:1px solid var(--border);border-radius:20px 20px 0 0;padding:24px 20px calc(24px + var(--safe-bot));width:100%}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:16px}
+.modal input{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);outline:none;margin-bottom:14px}
+.modal input:focus{border-color:var(--gold)}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(80px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 18px;font-size:13px;color:var(--text);opacity:0;transition:all .3s;z-index:200;white-space:nowrap}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+
+/* ── HEADER BADGE ── */
+.scenario-count{background:var(--gold);color:#0a0e1a;font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;font-family:'DM Mono',monospace}
+
+/* ── MODE SWITCHER ── */
+.mode-switcher{display:grid;grid-template-columns:1fr 1fr;gap:3px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:3px;margin-bottom:14px}
+.mode-btn{padding:9px 6px;border:none;border-radius:7px;background:transparent;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:12px;font-weight:600;letter-spacing:.04em;cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:5px;-webkit-appearance:none}
+.mode-btn.active{background:var(--surface);color:var(--gold);box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.mode-btn svg{width:13px;height:13px;flex-shrink:0}
+
+/* ── CONSTRAINT RESULT CARDS ── */
+.constraint-grid{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:14px}
+.constraint-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.constraint-card.binding{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold-dim)}
+.cc-header{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--surface2);border-bottom:1px solid var(--border)}
+.cc-label{font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.cc-badge{font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:#1f3520;color:var(--green)}
+.cc-badge.binding{background:#2d2410;color:var(--gold)}
+.cc-badge.inactive{background:var(--surface);color:var(--muted)}
+.cc-body{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1px;background:var(--border)}
+.cc-stat{background:var(--surface);padding:10px 12px}
+.cc-stat-label{font-size:9px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.cc-stat-val{font-family:'DM Mono',monospace;font-size:14px;font-weight:500;color:var(--text)}
+.cc-stat-val.primary{font-size:17px;color:var(--gold)}
+.cc-stat-val.green{color:var(--green)}
+.binding-banner{background:linear-gradient(90deg,#2d2410,#1a1608);border-top:1px solid var(--gold-dim);padding:7px 14px;font-size:10px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--gold);display:flex;align-items:center;gap:6px}
+
+/* ── SOLVE INPUTS ── */
+.solve-note{font-size:11px;color:var(--muted);padding:8px 14px 10px;line-height:1.5;border-bottom:1px solid var(--border)}
+.field.disabled{opacity:.4;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Header -->
+  <div id="header">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" stroke-width="1.5"><rect x="2" y="3" width="20" height="18" rx="2"/><path d="M7 8h10M7 12h6M7 16h4"/></svg>
+    <h1>Mortgage Calc</h1>
+    <span id="scenario-badge" class="scenario-count" style="display:none">0</span>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- ═══════════ CALCULATOR PANE ═══════════ -->
+    <div id="pane-calc" class="pane active">
+
+      <!-- Mode switcher -->
+      <div class="mode-switcher">
+        <button class="mode-btn active" id="mode-btn-calc" onclick="switchMode('calc')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="12" y2="13"/></svg>
+          Calculate DS
+        </button>
+        <button class="mode-btn" id="mode-btn-solve" onclick="switchMode('solve')">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4-4M11 8v3h3"/></svg>
+          Solve for Loan
+        </button>
+      </div>
+
+      <!-- ── CALC MODE INPUTS ── -->
+      <div id="calc-inputs">
+        <div class="card">
+          <div class="card-header"><div class="dot"></div><h2>Loan Parameters</h2></div>
+          <div class="field-grid">
+            <div class="field full">
+              <label>Loan Amount</label>
+              <input type="text" inputmode="numeric" id="loanAmount" value="16,500,000" placeholder="0"/>
+            </div>
+            <div class="field">
+              <label>NCF / NOI</label>
+              <input type="text" inputmode="numeric" id="ncf" value="1,165,315" placeholder="0"/>
+            </div>
+            <div class="field">
+              <label>Rate</label>
+              <input type="text" inputmode="decimal" id="rate" value="5.85" placeholder="0.00"/>
+              <span class="suffix">%</span>
+            </div>
+            <div class="field">
+              <label>Loan Term</label>
+              <input type="text" inputmode="numeric" id="term" value="5" placeholder="0"/>
+              <span class="suffix">Years</span>
+            </div>
+            <div class="field">
+              <label>Amortization</label>
+              <input type="text" inputmode="numeric" id="amort" value="30" placeholder="9999 = full IO"/>
+              <span class="suffix">Yrs (9999=Full IO)</span>
+            </div>
+            <div class="field">
+              <label>IO Period</label>
+              <input type="text" inputmode="numeric" id="ioYears" value="0" placeholder="0"/>
+              <span class="suffix">Yrs (0 = none)</span>
+            </div>
+            <div class="field">
+              <label>Day Count</label>
+              <select id="dayCount">
+                <option value="30360">30/360</option>
+                <option value="act360">ACT/360</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Loan Start</label>
+              <input type="date" id="startDate"/>
+            </div>
+            <div class="field">
+              <label>Spread</label>
+              <input type="text" inputmode="decimal" id="spread" value="" placeholder="optional"/>
+              <span class="suffix">% over index</span>
+            </div>
+            <div class="field">
+              <label>Index Rate</label>
+              <input type="text" inputmode="decimal" id="indexRate" value="" placeholder="optional"/>
+              <span class="suffix">%</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── SOLVE MODE INPUTS ── -->
+      <div id="solve-inputs" style="display:none">
+        <div class="card">
+          <div class="card-header"><div class="dot"></div><h2>Property &amp; Loan Terms</h2></div>
+          <div class="solve-note">Enter NCF and loan terms. Set one or more constraints — the tightest one determines the max loan.</div>
+          <div class="field-grid">
+            <div class="field full">
+              <label>NCF / NOI</label>
+              <input type="text" inputmode="numeric" id="s-ncf" value="1,165,315" placeholder="0"/>
+            </div>
+            <div class="field">
+              <label>Rate</label>
+              <input type="text" inputmode="decimal" id="s-rate" value="5.85" placeholder="0.00"/>
+              <span class="suffix">%</span>
+            </div>
+            <div class="field">
+              <label>Day Count</label>
+              <select id="s-dayCount">
+                <option value="30360">30/360</option>
+                <option value="act360">ACT/360</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Loan Term</label>
+              <input type="text" inputmode="numeric" id="s-term" value="5" placeholder="0"/>
+              <span class="suffix">Years</span>
+            </div>
+            <div class="field">
+              <label>Amortization</label>
+              <input type="text" inputmode="numeric" id="s-amort" value="30" placeholder="9999 = full IO"/>
+              <span class="suffix">Yrs (9999=Full IO)</span>
+            </div>
+            <div class="field">
+              <label>IO Period</label>
+              <input type="text" inputmode="numeric" id="s-ioYears" value="0" placeholder="0"/>
+              <span class="suffix">Yrs (0 = none)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header"><div class="dot"></div><h2>Constraints</h2></div>
+          <div class="solve-note">Leave blank to skip that constraint.</div>
+          <div class="field-grid">
+            <div class="field">
+              <label>Min DSCR</label>
+              <input type="text" inputmode="decimal" id="s-dscr" value="1.25" placeholder="e.g. 1.25"/>
+              <span class="suffix">× (floor)</span>
+            </div>
+            <div class="field">
+              <label>Min Debt Yield</label>
+              <input type="text" inputmode="decimal" id="s-dy" value="" placeholder="e.g. 7.5"/>
+              <span class="suffix">% (floor)</span>
+            </div>
+            <div class="field">
+              <label>Max LTV</label>
+              <input type="text" inputmode="decimal" id="s-ltv" value="" placeholder="e.g. 65"/>
+              <span class="suffix">%</span>
+            </div>
+            <div class="field">
+              <label>Appraised Value</label>
+              <input type="text" inputmode="numeric" id="s-value" value="" placeholder="for LTV calc"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- Constraint results rendered here -->
+        <div id="solve-results"></div>
+
+        <button class="btn btn-gold" onclick="openSaveModalSolve()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Save Binding Scenario
+        </button>
+      </div>
+
+      <!-- Results -->
+      <div id="calc-results-section">
+      <div class="card" id="results-card">
+        <div class="card-header"><div class="dot"></div><h2>Results</h2></div>
+        <div class="results-grid" id="results-grid">
+          <div class="result-item highlight full">
+            <div class="result-label" id="r-annual-ds-label">Annual Debt Service</div>
+            <div class="result-value big" id="r-annual-ds">—</div>
+          </div>
+          <div class="result-item" id="r-io-pmt-row" style="display:none">
+            <div class="result-label">IO Monthly Pmt</div>
+            <div class="result-value cyan" id="r-io-monthly">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label" id="r-monthly-ds-label">Monthly Payment</div>
+            <div class="result-value" id="r-monthly-ds">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Loan Constant (K)</div>
+            <div class="result-value" id="r-k">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">DSCR</div>
+            <div class="result-value" id="r-dscr">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Debt Yield</div>
+            <div class="result-value" id="r-dy">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Maturity Balance</div>
+            <div class="result-value cyan" id="r-maturity">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Total Interest Paid</div>
+            <div class="result-value" id="r-total-int">—</div>
+          </div>
+          <div class="result-item">
+            <div class="result-label">Total Principal Paid</div>
+            <div class="result-value" id="r-total-prin">—</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Save button -->
+      <button class="btn btn-gold" onclick="openSaveModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        Save Scenario
+      </button>
+      </div><!-- /calc-results-section -->
+
+      <!-- Amort schedule toggle -->
+      <div class="toggle-row" style="margin-top:14px">
+        <button class="toggle-btn active" id="toggle-summary" onclick="showSchedule('summary')">Summary</button>
+        <button class="toggle-btn" id="toggle-full" onclick="showSchedule('full')">Full Schedule</button>
+      </div>
+
+      <!-- Schedule output -->
+      <div class="card">
+        <div class="card-header"><div class="dot"></div><h2 id="sched-title">Annual Summary</h2></div>
+        <div class="table-wrap">
+          <table id="sched-table">
+            <thead id="sched-head"></thead>
+            <tbody id="sched-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══════════ SCENARIOS PANE ═══════════ -->
+    <div id="pane-scenarios" class="pane">
+      <div id="scenarios-list"></div>
+    </div>
+
+    <!-- ═══════════ COMPARE PANE ═══════════ -->
+    <div id="pane-compare" class="pane">
+      <div id="compare-content"></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Tab bar -->
+  <div class="tab-bar">
+    <button class="tab active" id="tab-calc" onclick="switchTab('calc')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="12" y2="17"/></svg>
+      Calc
+    </button>
+    <button class="tab" id="tab-scenarios" onclick="switchTab('scenarios')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 9h18M9 21V9"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+      Scenarios
+    </button>
+    <button class="tab" id="tab-compare" onclick="switchTab('compare')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      Compare
+    </button>
+  </div>
+</div>
+
+<!-- Save Modal -->
+<div class="modal-overlay" id="modal" onclick="e=>e.target===this&&closeModal()">
+  <div class="modal">
+    <h3>Save Scenario</h3>
+    <input type="text" id="scenario-name" placeholder="e.g. Voya 5yr Fixed 5.75%" maxlength="40"/>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-gold" style="flex:2" onclick="saveScenario()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── STATE ──
+let scheduleMode = 'summary';
+let scenarios = JSON.parse(localStorage.getItem('mc_scenarios') || '[]');
+let lastCalc = null;
+
+// ── INIT ──
+document.getElementById('startDate').value = new Date().toISOString().split('T')[0];
+document.querySelectorAll('#pane-calc input, #pane-calc select').forEach(el =>
+  el.addEventListener('input', debounce(calculate, 300))
+);
+calculate();
+renderScenarios();
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
+
+// ── HELPERS ──
+function debounce(fn, ms) {
+  let t; return (...a) => { clearTimeout(t); t = setTimeout(()=>fn(...a), ms); };
+}
+function parseMoney(s) {
+  return parseFloat(String(s).replace(/,/g,'').replace(/\$/g,'')) || 0;
+}
+function fmt$(n, decimals=0) {
+  if(!isFinite(n)||isNaN(n)) return '—';
+  return '$' + n.toLocaleString('en-US', {minimumFractionDigits:decimals, maximumFractionDigits:decimals});
+}
+function fmtPct(n, d=2) {
+  if(!isFinite(n)||isNaN(n)) return '—';
+  return n.toFixed(d) + '%';
+}
+function fmtX(n) {
+  if(!isFinite(n)||isNaN(n)) return '—';
+  return n.toFixed(2) + 'x';
+}
+function colorDscr(el, v) {
+  el.className = 'result-value ' + (v >= 1.25 ? 'green' : v >= 1.0 ? '' : 'red');
+}
+
+// ── CALCULATE ──
+function calcPayments(loan, effRate, amort, ioYears, term) {
+  // Returns { ioMonthly, amortMonthly, isFullIO, isPIO }
+  const mRate   = effRate / 12;
+  const fullIO  = amort >= 9999 || ioYears >= term;
+  const hasIO   = ioYears > 0;
+  const isPIO   = hasIO && !fullIO;
+
+  // IO payment = pure interest on original balance
+  const ioMonthly = mRate > 0 ? loan * mRate : 0;
+
+  // Amortizing payment = fully amortizing over `amort` years on original balance
+  let amortMonthly;
+  if (fullIO) {
+    amortMonthly = ioMonthly;
+  } else {
+    const n = amort * 12;
+    amortMonthly = mRate > 0 ? (loan * mRate) / (1 - Math.pow(1 + mRate, -n)) : loan / n;
+  }
+
+  return { ioMonthly, amortMonthly, isFullIO: fullIO, isPIO };
+}
+
+function calcMaturityBal(loan, effRate, amort, ioYears, term) {
+  const mRate = effRate / 12;
+  const ioMos = Math.min((ioYears || 0) * 12, term * 12);
+  const amortMos = term * 12 - ioMos; // months in amort phase within term
+
+  if (amort >= 9999 || ioYears >= term) return loan; // pure IO, no paydown
+
+  // Balance after IO phase = still full loan (no principal paid)
+  // Amortizing payment based on full amort schedule
+  const n = amort * 12;
+  const amortPmt = mRate > 0 ? (loan * mRate) / (1 - Math.pow(1 + mRate, -n)) : loan / n;
+
+  // Balance remaining after amortMos of amort payments
+  let bal = loan;
+  if (mRate > 0) {
+    bal = loan * Math.pow(1 + mRate, amortMos) - amortPmt * (Math.pow(1 + mRate, amortMos) - 1) / mRate;
+  } else {
+    bal = loan - amortPmt * amortMos;
+  }
+  return Math.max(bal, 0);
+}
+
+function calculate() {
+  const loan    = parseMoney(document.getElementById('loanAmount').value);
+  const ncf     = parseMoney(document.getElementById('ncf').value);
+  const rate    = parseFloat(document.getElementById('rate').value) / 100 || 0;
+  const term    = parseInt(document.getElementById('term').value) || 0;
+  const amort   = parseInt(document.getElementById('amort').value) || 9999;
+  const ioYears = parseFloat(document.getElementById('ioYears').value) || 0;
+  const dc      = document.getElementById('dayCount').value;
+  const spread  = parseFloat(document.getElementById('spread').value) / 100 || 0;
+  const idxRate = parseFloat(document.getElementById('indexRate').value) / 100 || 0;
+
+  if (!loan || !rate || !term) { setResults({}); return; }
+
+  const effRate = dc === 'act360' ? rate * (365/360) : rate;
+  const { ioMonthly, amortMonthly, isFullIO, isPIO } = calcPayments(loan, effRate, amort, ioYears, term);
+
+  // Headline DS = amortizing payment (the binding / higher payment; what lenders underwrite to)
+  const annualDS  = amortMonthly * 12;
+  const ioAnnualDS = ioMonthly * 12;
+
+  // K based on amortizing payment
+  const K    = annualDS / loan;
+  const dscr = ncf / annualDS;
+  const dy   = ncf / loan;
+
+  const maturityBal = calcMaturityBal(loan, effRate, amort, ioYears, term);
+
+  const schedule  = buildSchedule(loan, effRate, amort, ioYears, term, dc, rate);
+  const totalInt  = schedule.reduce((s, r) => s + r.interest, 0);
+  const totalPrin = schedule.reduce((s, r) => s + r.principal, 0);
+
+  lastCalc = { loan, ncf, rate, effRate, term, amort, ioYears, dc,
+               ioMonthly, amortMonthly, monthlyDS: amortMonthly,
+               annualDS, ioAnnualDS, K, dscr, dy, maturityBal,
+               totalInt, totalPrin, schedule, spread, idxRate, isPIO, isFullIO };
+
+  setResults(lastCalc);
+  renderSchedule(schedule);
+}
+
+function buildSchedule(loan, effRate, amort, ioYears, term, dc, nominalRate) {
+  const mRate   = effRate / 12;
+  const ioMos   = Math.min((ioYears || 0) * 12, term * 12);
+  const fullIO  = amort >= 9999 || ioYears >= term;
+  const n       = amort * 12;
+  const amortPmt = (!fullIO && mRate > 0) ? (loan * mRate) / (1 - Math.pow(1 + mRate, -n))
+                 : (!fullIO ? loan / n : loan * mRate);
+
+  const rows = [];
+  let bal = loan;
+  const startDate = new Date(document.getElementById('startDate').value || Date.now());
+
+  for (let i = 1; i <= term * 12; i++) {
+    const inIO = i <= ioMos || fullIO;
+
+    let interest;
+    if (dc === 'act360') {
+      const d1 = new Date(startDate.getFullYear(), startDate.getMonth() + i - 1, 1);
+      const d2 = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+      const days = (d2 - d1) / 86400000;
+      interest = bal * nominalRate * days / 360;
+    } else {
+      interest = bal * mRate;
+    }
+
+    let principal, payment;
+    if (inIO) {
+      principal = 0;
+      payment   = interest;
+    } else {
+      payment   = amortPmt;
+      principal = Math.min(payment - interest, bal);
+    }
+
+    const endBal = Math.max(bal - principal, 0);
+    const dt = new Date(startDate);
+    dt.setMonth(dt.getMonth() + i);
+
+    rows.push({
+      month: i, date: dt, begBal: bal,
+      payment: interest + principal, interest, principal,
+      endBal, inIO
+    });
+    bal = endBal;
+    if (bal < 0.01) bal = 0;
+  }
+  return rows;
+}
+
+function setResults(c) {
+  const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+  const isPIO = c.isPIO;
+  const isFullIO = c.isFullIO;
+
+  // Headline label
+  const annualLabel = isPIO ? 'Amort Annual DS (binding)' : 'Annual Debt Service';
+  const monthlyLabel = isPIO ? 'Amort Monthly Pmt' : isFullIO ? 'IO Monthly Pmt' : 'Monthly Payment';
+  const el = document.getElementById('r-annual-ds-label');
+  if (el) el.textContent = annualLabel;
+  const ml = document.getElementById('r-monthly-ds-label');
+  if (ml) ml.textContent = monthlyLabel;
+
+  // Show/hide IO row for PIO
+  const ioRow = document.getElementById('r-io-pmt-row');
+  if (ioRow) ioRow.style.display = isPIO ? '' : 'none';
+
+  set('r-annual-ds',  fmt$(c.annualDS));
+  set('r-monthly-ds', fmt$(c.amortMonthly ?? c.monthlyDS));
+  set('r-io-monthly', isPIO ? fmt$(c.ioMonthly) : '—');
+  set('r-k',          c.K != null ? fmtPct(c.K * 100) : '—');
+  set('r-dy',         c.dy != null ? fmtPct(c.dy * 100) : '—');
+  set('r-maturity',   fmt$(c.maturityBal));
+  set('r-total-int',  fmt$(c.totalInt));
+  set('r-total-prin', fmt$(c.totalPrin));
+
+  const dscEl = document.getElementById('r-dscr');
+  if (dscEl) {
+    dscEl.textContent = c.dscr ? fmtX(c.dscr) : '—';
+    if (c.dscr) colorDscr(dscEl, c.dscr);
+  }
+}
+
+// ── SCHEDULE ──
+function showSchedule(mode) {
+  scheduleMode = mode;
+  document.getElementById('toggle-summary').classList.toggle('active', mode === 'summary');
+  document.getElementById('toggle-full').classList.toggle('active', mode === 'full');
+  document.getElementById('sched-title').textContent = mode === 'full' ? 'Monthly Schedule' : 'Annual Summary';
+  if (lastCalc) renderSchedule(lastCalc.schedule);
+}
+
+function renderSchedule(rows) {
+  const head = document.getElementById('sched-head');
+  const body = document.getElementById('sched-body');
+  if (!rows || !rows.length) { head.innerHTML = ''; body.innerHTML = ''; return; }
+
+  const hasIO = rows.some(r => r.inIO);
+  const hasMixed = hasIO && rows.some(r => !r.inIO);
+
+  if (scheduleMode === 'full') {
+    head.innerHTML = `<tr>
+      <th>Mo</th><th>Date</th><th>Type</th><th>Beg Bal</th>
+      <th>Payment</th><th>Interest</th><th>Principal</th><th>End Bal</th>
+    </tr>`;
+    body.innerHTML = rows.map(r => {
+      const isYrEnd = r.month % 12 === 0;
+      const typeLabel = r.inIO ? '<span style="color:var(--cyan);font-size:9px">IO</span>'
+                                : '<span style="color:var(--muted);font-size:9px">AM</span>';
+      return `<tr class="${isYrEnd ? 'yr-end' : ''}">
+        <td>${r.month}</td>
+        <td>${r.date.toLocaleDateString('en-US',{month:'short',year:'2-digit'})}</td>
+        <td style="text-align:center">${typeLabel}</td>
+        <td>${fmt$(r.begBal)}</td>
+        <td>${fmt$(r.payment)}</td>
+        <td>${fmt$(r.interest)}</td>
+        <td>${fmt$(r.principal)}</td>
+        <td>${fmt$(r.endBal)}</td>
+      </tr>`;
+    }).join('') + `<tr class="totals">
+      <td colspan="4">Totals</td>
+      <td>${fmt$(rows.reduce((s,r)=>s+r.payment,0))}</td>
+      <td>${fmt$(rows.reduce((s,r)=>s+r.interest,0))}</td>
+      <td>${fmt$(rows.reduce((s,r)=>s+r.principal,0))}</td>
+      <td></td>
+    </tr>`;
+  } else {
+    // Annual summary
+    head.innerHTML = `<tr>
+      <th>Year</th><th>Phase</th><th>Beg Bal</th>
+      <th>Interest</th><th>Principal</th><th>End Bal</th>
+    </tr>`;
+    const years = [];
+    for (let y = 1; y <= Math.ceil(rows.length / 12); y++) {
+      const chunk = rows.slice((y-1)*12, y*12);
+      if (!chunk.length) continue;
+      const ioCount   = chunk.filter(r => r.inIO).length;
+      const amCount   = chunk.filter(r => !r.inIO).length;
+      let phase = 'Amort';
+      if (ioCount === chunk.length) phase = 'IO';
+      else if (ioCount > 0) phase = 'IO→AM';
+      years.push({
+        year: y, phase,
+        begBal:    chunk[0].begBal,
+        interest:  chunk.reduce((s,r)=>s+r.interest,0),
+        principal: chunk.reduce((s,r)=>s+r.principal,0),
+        endBal:    chunk[chunk.length-1].endBal,
+      });
+    }
+    body.innerHTML = years.map(y => {
+      const phaseColor = y.phase === 'IO' ? 'var(--cyan)' : y.phase === 'IO→AM' ? 'var(--gold)' : 'var(--muted)';
+      return `<tr>
+        <td>Yr ${y.year}</td>
+        <td style="text-align:center;font-size:10px;color:${phaseColor}">${y.phase}</td>
+        <td>${fmt$(y.begBal)}</td>
+        <td>${fmt$(y.interest)}</td>
+        <td>${fmt$(y.principal)}</td>
+        <td>${fmt$(y.endBal)}</td>
+      </tr>`;
+    }).join('') + `<tr class="totals">
+      <td colspan="3">Totals</td>
+      <td>${fmt$(years.reduce((s,y)=>s+y.interest,0))}</td>
+      <td>${fmt$(years.reduce((s,y)=>s+y.principal,0))}</td>
+      <td></td>
+    </tr>`;
+  }
+}
+
+// ── SCENARIOS ──
+function openSaveModal() {
+  if (!lastCalc) { showToast('Calculate a loan first'); return; }
+  document.getElementById('scenario-name').value = '';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('scenario-name').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+function saveScenario() {
+  const name = document.getElementById('scenario-name').value.trim() || `Scenario ${scenarios.length + 1}`;
+  let c, loan, ncf, rate, term, amort, dc;
+
+  if (window._saveFromSolve && lastSolve) {
+    window._saveFromSolve = false;
+    c = {
+      monthlyDS:   lastSolve.annualDS / 12,
+      annualDS:    lastSolve.annualDS,
+      K:           lastSolve.K,
+      dscr:        lastSolve.dscr,
+      dy:          lastSolve.dy,
+      maturityBal: 0, // simplified
+      totalInt:    0,
+    };
+    loan  = lastSolve.loan;
+    ncf   = lastSolve.ncf;
+    rate  = lastSolve.rate;
+    term  = lastSolve.term;
+    amort = lastSolve.amort;
+    dc    = lastSolve.dc;
+    // Also compute maturity bal
+    const effRate = lastSolve.effRate;
+    const mRate = effRate / 12;
+    const n = amort >= 9999 ? term*12 : amort*12;
+    if (amort < 9999 && mRate > 0) {
+      const mDS = c.monthlyDS;
+      c.maturityBal = loan * Math.pow(1+mRate, term*12) - mDS * (Math.pow(1+mRate, term*12)-1) / mRate;
+      if (c.maturityBal < 0.01) c.maturityBal = 0;
+    } else {
+      c.maturityBal = loan;
+    }
+    c.totalInt = c.annualDS * term - (loan - c.maturityBal);
+  } else {
+    window._saveFromSolve = false;
+    c     = lastCalc;
+    loan  = parseMoney(document.getElementById('loanAmount').value);
+    ncf   = parseMoney(document.getElementById('ncf').value);
+    rate  = parseFloat(document.getElementById('rate').value);
+    term  = parseInt(document.getElementById('term').value);
+    amort = parseInt(document.getElementById('amort').value);
+    dc    = document.getElementById('dayCount').value;
+  }
+
+  const ioYears = window._saveFromSolve ? (lastSolve?.ioYears || 0)
+                : (parseFloat(document.getElementById('ioYears').value) || 0);
+
+  scenarios.push({
+    id: Date.now(), name, loan, ncf, rate, term, amort, ioYears, dc,
+    spread:    parseFloat(document.getElementById('spread').value) || null,
+    indexRate: parseFloat(document.getElementById('indexRate').value) || null,
+    results: {
+      monthlyDS:   c.monthlyDS,
+      annualDS:    c.annualDS,
+      K:           c.K,
+      dscr:        c.dscr,
+      dy:          c.dy,
+      maturityBal: c.maturityBal,
+      totalInt:    c.totalInt,
+    }
+  });
+  localStorage.setItem('mc_scenarios', JSON.stringify(scenarios));
+  closeModal();
+  updateBadge();
+  renderScenarios();
+  renderCompare();
+  showToast(`"${name}" saved`);
+}
+
+function deleteScenario(id) {
+  scenarios = scenarios.filter(s => s.id !== id);
+  localStorage.setItem('mc_scenarios', JSON.stringify(scenarios));
+  updateBadge();
+  renderScenarios();
+  renderCompare();
+}
+
+function loadScenario(id) {
+  const s = scenarios.find(x => x.id === id);
+  if (!s) return;
+  document.getElementById('loanAmount').value = s.loan.toLocaleString();
+  document.getElementById('ncf').value = s.ncf.toLocaleString();
+  document.getElementById('rate').value = s.rate;
+  document.getElementById('term').value = s.term;
+  document.getElementById('amort').value = s.amort;
+  document.getElementById('ioYears').value = s.ioYears || 0;
+  document.getElementById('dayCount').value = s.dc;
+  if (s.spread) document.getElementById('spread').value = s.spread;
+  if (s.indexRate) document.getElementById('indexRate').value = s.indexRate;
+  calculate();
+  switchTab('calc');
+  switchMode('calc');
+  showToast(`Loaded "${s.name}"`);
+}
+
+function renderScenarios() {
+  const el = document.getElementById('scenarios-list');
+  if (!scenarios.length) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+      <p>No saved scenarios yet.<br>Calculate a loan and hit Save.</p>
+    </div>`;
+    return;
+  }
+  el.innerHTML = scenarios.map(s => {
+    const dcLabel   = s.dc === 'act360' ? 'ACT/360' : '30/360';
+    const ioLabel   = s.ioYears > 0 ? `${s.ioYears}yr IO → ` : '';
+    const amortLabel = s.amort >= 9999 ? 'Full IO' : `${ioLabel}${s.amort}yr amort`;
+    const dscrColor = s.results.dscr >= 1.25 ? 'var(--green)' : s.results.dscr >= 1.0 ? 'var(--gold)' : 'var(--red)';
+    return `<div class="scenario-card">
+      <h3>${s.name}</h3>
+      <div class="scenario-meta">
+        ${fmt$(s.loan)} · ${s.rate}% · ${s.term}yr term · ${amortLabel} · ${dcLabel}
+      </div>
+      <div class="scenario-kpis">
+        <div class="kpi"><div class="kpi-label">Ann. DS</div><div class="kpi-val">${fmt$(s.results.annualDS)}</div></div>
+        <div class="kpi"><div class="kpi-label">DSCR</div><div class="kpi-val" style="color:${dscrColor}">${fmtX(s.results.dscr)}</div></div>
+        <div class="kpi"><div class="kpi-label">Debt Yield</div><div class="kpi-val">${fmtPct(s.results.dy*100)}</div></div>
+        <div class="kpi"><div class="kpi-label">K</div><div class="kpi-val">${fmtPct(s.results.K*100)}</div></div>
+        <div class="kpi"><div class="kpi-label">Maturity Bal</div><div class="kpi-val">${fmt$(s.results.maturityBal)}</div></div>
+        <div class="kpi"><div class="kpi-label">Total Int</div><div class="kpi-val">${fmt$(s.results.totalInt)}</div></div>
+      </div>
+      <div class="scenario-actions">
+        <button class="btn btn-outline" onclick="loadScenario(${s.id})">Load</button>
+        <button class="btn btn-danger" onclick="deleteScenario(${s.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── COMPARE ──
+function renderCompare() {
+  const el = document.getElementById('compare-content');
+  if (scenarios.length < 2) {
+    el.innerHTML = `<div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M18 20V10M12 20V4M6 20v-6"/></svg>
+      <p>Save at least 2 scenarios<br>to compare side by side.</p>
+    </div>`;
+    return;
+  }
+  // Find best values for highlighting
+  const minDS  = Math.min(...scenarios.map(s => s.results.annualDS));
+  const maxDSCR = Math.max(...scenarios.map(s => s.results.dscr));
+  const minK   = Math.min(...scenarios.map(s => s.results.K));
+  const maxDY  = Math.max(...scenarios.map(s => s.results.dy));
+  const minInt = Math.min(...scenarios.map(s => s.results.totalInt));
+  const minMat = Math.min(...scenarios.map(s => s.results.maturityBal));
+
+  const headerRow = `<tr><th>Metric</th>${scenarios.map(s=>`<th>${s.name}</th>`).join('')}</tr>`;
+
+  const rows = [
+    ['Loan Amount',    s => fmt$(s.loan), null],
+    ['Rate',           s => `${s.rate}%`, null],
+    ['Term',           s => `${s.term}yr`, null],
+    ['Amortization',   s => s.amort >= 9999 ? 'IO' : `${s.amort}yr`, null],
+    ['Day Count',      s => s.dc === 'act360' ? 'ACT/360' : '30/360', null],
+    ['Monthly DS',     s => fmt$(s.results.monthlyDS), (v,s) => s.results.annualDS === minDS],
+    ['Annual DS',      s => fmt$(s.results.annualDS),  (v,s) => s.results.annualDS === minDS],
+    ['Loan Constant',  s => fmtPct(s.results.K*100),   (v,s) => s.results.K === minK],
+    ['DSCR',           s => fmtX(s.results.dscr),      (v,s) => s.results.dscr === maxDSCR],
+    ['Debt Yield',     s => fmtPct(s.results.dy*100),  (v,s) => s.results.dy === maxDY],
+    ['Maturity Bal',   s => fmt$(s.results.maturityBal),(v,s) => s.results.maturityBal === minMat],
+    ['Total Interest', s => fmt$(s.results.totalInt),  (v,s) => s.results.totalInt === minInt],
+  ];
+
+  const dataRows = rows.map(([label, valFn, isBestFn]) =>
+    `<tr><td>${label}</td>${scenarios.map(s => {
+      const val = valFn(s);
+      const best = isBestFn ? isBestFn(val, s) : false;
+      return `<td class="${best ? 'best' : ''}">${val}</td>`;
+    }).join('')}</tr>`
+  ).join('');
+
+  el.innerHTML = `<div class="card">
+    <div class="card-header"><div class="dot"></div><h2>Side-by-Side Comparison</h2></div>
+    <div class="table-wrap">
+      <table class="compare-table">
+        <thead>${headerRow}</thead>
+        <tbody>${dataRows}</tbody>
+      </table>
+    </div>
+  </div>
+  <p style="font-size:11px;color:var(--muted);text-align:center;margin-top:-6px;padding-bottom:8px">
+    <span style="color:var(--green)">■</span> Green = best value for that metric
+  </p>`;
+}
+
+// ── MODE ──
+let calcMode = 'calc'; // 'calc' | 'solve'
+let lastSolve = null;
+
+function switchMode(mode) {
+  calcMode = mode;
+  document.getElementById('mode-btn-calc').classList.toggle('active', mode === 'calc');
+  document.getElementById('mode-btn-solve').classList.toggle('active', mode === 'solve');
+  document.getElementById('calc-inputs').style.display      = mode === 'calc'  ? '' : 'none';
+  document.getElementById('calc-results-section').style.display = mode === 'calc' ? '' : 'none';
+  document.getElementById('solve-inputs').style.display     = mode === 'solve' ? '' : 'none';
+  if (mode === 'solve') solveCalc();
+}
+
+// Wire up solve inputs
+document.querySelectorAll('#solve-inputs input, #solve-inputs select').forEach(el =>
+  el.addEventListener('input', debounce(solveCalc, 300))
+);
+
+function maxLoanFromDS(annualDS, effRate, amort) {
+  const mRate = effRate / 12;
+  const monthlyDS = annualDS / 12;
+  if (amort >= 9999) {
+    return mRate > 0 ? annualDS / effRate : 0;
+  }
+  const n = amort * 12;
+  return mRate > 0 ? monthlyDS * (1 - Math.pow(1 + mRate, -n)) / mRate : monthlyDS * n;
+}
+
+function solveCalc() {
+  const ncf     = parseMoney(document.getElementById('s-ncf').value);
+  const rate    = parseFloat(document.getElementById('s-rate').value) / 100 || 0;
+  const dc      = document.getElementById('s-dayCount').value;
+  const term    = parseInt(document.getElementById('s-term').value) || 0;
+  const amort   = parseInt(document.getElementById('s-amort').value) || 9999;
+  const ioYears = parseFloat(document.getElementById('s-ioYears').value) || 0;
+  const tDSCR   = parseFloat(document.getElementById('s-dscr').value) || 0;
+  const tDY     = parseFloat(document.getElementById('s-dy').value) / 100 || 0;
+  const tLTV    = parseFloat(document.getElementById('s-ltv').value) / 100 || 0;
+  const apprVal = parseMoney(document.getElementById('s-value').value);
+
+  const el = document.getElementById('solve-results');
+  if (!ncf || !rate || !term) { el.innerHTML = ''; return; }
+
+  const effRate = dc === 'act360' ? rate * (365/360) : rate;
+
+  // Helper: given a loan, compute the amortizing (binding) annual DS
+  function annualDSForLoan(loan) {
+    const { amortMonthly } = calcPayments(loan, effRate, amort, ioYears, term);
+    return amortMonthly * 12;
+  }
+
+  // ── Per-constraint max loans ──
+  const constraints = [];
+
+  if (tDSCR > 0) {
+    // NCF / DSCR = max annual DS (amortizing period payment)
+    // Solve: amortMonthly = (NCF/DSCR)/12 → loan = amortMonthly / K_factor
+    const targetAnnualDS = ncf / tDSCR;
+    const loan = maxLoanFromDS(targetAnnualDS, effRate, amort);
+    const ds = annualDSForLoan(loan);
+    const K  = ds / loan;
+    const dy = ncf / loan;
+    constraints.push({ label:'DSCR', sublabel:`Min ${tDSCR.toFixed(2)}×`, loan, annualDS: ds, K, dscr: tDSCR, dy, ioYears });
+  }
+
+  if (tDY > 0) {
+    const loan = ncf / tDY;
+    const ds   = annualDSForLoan(loan);
+    const K    = ds / loan;
+    const dscr = ncf / ds;
+    constraints.push({ label:'Debt Yield', sublabel:`Min ${(tDY*100).toFixed(2)}%`, loan, annualDS: ds, K, dscr, dy: tDY, ioYears });
+  }
+
+  if (tLTV > 0 && apprVal > 0) {
+    const loan = apprVal * tLTV;
+    const ds   = annualDSForLoan(loan);
+    const K    = ds / loan;
+    const dscr = ncf / ds;
+    const dy   = ncf / loan;
+    constraints.push({ label:'LTV', sublabel:`Max ${(tLTV*100).toFixed(1)}%`, loan, annualDS: ds, K, dscr, dy, ioYears });
+  }
+
+  if (!constraints.length) { el.innerHTML = ''; return; }
+
+  const minLoan = Math.min(...constraints.map(c => c.loan));
+  const binding = constraints.find(c => c.loan === minLoan);
+  lastSolve = { ...binding, ncf, rate: rate*100, term, amort, dc, effRate, ioYears };
+
+  el.innerHTML = constraints.map(c => {
+    const isBinding  = c === binding;
+    const dscrColor  = c.dscr >= 1.25 ? 'var(--green)' : c.dscr >= 1.0 ? 'var(--gold)' : 'var(--red)';
+    const pioNote    = ioYears > 0 && amort < 9999 && ioYears < term
+                       ? `<div style="font-size:10px;color:var(--cyan);padding:6px 14px;border-bottom:1px solid var(--border)">`
+                         + `IO: ${ioYears}yr → Amort: ${term-ioYears}yr remaining (${amort}yr schedule)</div>` : '';
+    return `<div class="constraint-card ${isBinding ? 'binding' : ''}">
+      <div class="cc-header">
+        <span class="cc-label">${c.label} Constraint</span>
+        <span class="cc-badge ${isBinding ? 'binding' : ''}">${isBinding ? '⬡ Binding' : 'Not Binding'}</span>
+      </div>
+      ${pioNote}
+      <div class="cc-body">
+        <div class="cc-stat" style="grid-column:1/-1;background:var(--surface2)">
+          <div class="cc-stat-label">Max Loan Amount</div>
+          <div class="cc-stat-val primary">${fmt$(c.loan)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-label">Annual DS</div>
+          <div class="cc-stat-val">${fmt$(c.annualDS)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-label">DSCR</div>
+          <div class="cc-stat-val" style="color:${dscrColor}">${fmtX(c.dscr)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-label">Debt Yield</div>
+          <div class="cc-stat-val">${fmtPct(c.dy*100)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-label">Monthly DS</div>
+          <div class="cc-stat-val">${fmt$(c.annualDS/12)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-label">Loan Const (K)</div>
+          <div class="cc-stat-val">${fmtPct(c.K*100)}</div>
+        </div>
+        <div class="cc-stat">
+          <div class="cc-stat-label">Constraint</div>
+          <div class="cc-stat-val" style="font-size:12px;color:var(--muted)">${c.sublabel}</div>
+        </div>
+      </div>
+      ${isBinding ? `<div class="binding-banner"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>Binding — max loan ${fmt$(c.loan)}</div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+function openSaveModalSolve() {
+  if (!lastSolve) { showToast('Run a solve first'); return; }
+  document.getElementById('scenario-name').value = '';
+  document.getElementById('modal').classList.add('open');
+  setTimeout(() => document.getElementById('scenario-name').focus(), 100);
+  // Flag so saveScenario knows to use solve data
+  window._saveFromSolve = true;
+}
+
+// ── MODE ──
+function switchTab(name) {
+  ['calc','scenarios','compare'].forEach(t => {
+    document.getElementById(`pane-${t}`).classList.toggle('active', t === name);
+    document.getElementById(`tab-${t}`).classList.toggle('active', t === name);
+  });
+  if (name === 'scenarios') renderScenarios();
+  if (name === 'compare')   renderCompare();
+}
+
+function updateBadge() {
+  const b = document.getElementById('scenario-badge');
+  if (scenarios.length > 0) {
+    b.textContent = scenarios.length;
+    b.style.display = 'inline';
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+// ── TOAST ──
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ── MODAL CLOSE ON OVERLAY TAP ──
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// ── INITIAL ──
+updateBadge();
+calculate();
+</script>
+</body>
+</html>
